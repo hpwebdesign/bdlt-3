@@ -1,0 +1,501 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+    <name>BDeepL Translation</name>
+    <code>BDLT</code>
+    <version>1.0.0.0</version>
+    <author>BarikLabs</author>
+    <link>https://bariklabs.com</link>
+
+    <file path="admin/language/*/common/column_left.php">
+        <operation error="skip">
+            <search trim="true"><![CDATA[// Text]]></search>
+            <add position="after"><![CDATA[
+            $_['text_bdlt']   = 'BDeepL Translation';
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/common/column_left.php">
+        <operation error="skip">
+            <search><![CDATA[$hpwd = array();]]></search>
+            <add position="after"><![CDATA[
+            if ($this->user->hasPermission('access', 'extension/module/bdlt_setting')) {
+                $hpwd[] = array(
+                  'name'     => $this->language->get('text_bdlt'),
+                  'href'     => $this->url->link('extension/module/bdlt_setting', 'user_token=' . $this->session->data['user_token'], true),
+                  'children' => array()
+                );
+            }
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/language/*/catalog/product.php">
+        <operation error="skip">
+            <search trim="true"><![CDATA[// Text]]></search>
+            <add position="after"><![CDATA[
+            $_['text_translate']   = 'Translate to';
+            ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/controller/catalog/product.php">
+        <operation>
+            <search><![CDATA[$this->response->setOutput($this->load->view('catalog/product_form', $data));]]></search>
+            <add position="before"><![CDATA[
+                    $data['bdlt_status'] = $this->config->get('module_bdlt_setting_status') ? 1 : 0;
+
+                    $data['default_language'] = $this->config->get('bdlt_setting_language_source') ? $this->config->get('bdlt_setting_language_source') : $this->config->get('config_language_id');
+                    $data['target_language'] = $this->config->get('bdlt_setting_translate_language') ? $this->config->get('bdlt_setting_translate_language') : 0;
+                    $data['paste_status'] = $this->config->get('bdlt_setting_paste_status');
+                
+                    $lang = $this->model_localisation_language->getLanguage($data['target_language']);
+                    $data['target_language_name'] = $lang ? $lang['name'] : '';
+
+                    $data['custom_field_selectors_json'] = false;
+
+                    if ($this->config->get('bdlt_setting_custom_fields')) {
+                        $custom_fields_raw = $this->config->get('bdlt_setting_custom_fields');
+                        preg_match_all('/product_field_(\d+)_\{lang_id\}/', $custom_fields_raw, $matches);
+                        $custom_field_ids = $matches[1];
+                        $data['custom_field_ids'] = $custom_field_ids;
+                        $selector_array = array_map('trim', explode(',', $custom_fields_raw));
+                        $data['custom_field_selectors_json'] = json_encode($selector_array);
+                        $data['custom_field_ids_json'] = json_encode($custom_field_ids);
+                    }
+
+                    ]]></add>
+        </operation>
+    </file>
+
+    <file path="admin/view/template/catalog/product_form.twig">
+        <!-- <operation>
+                <search><![CDATA[<div class="tab-pane active" id="tab-general">]]></search>
+                <add position="after"><![CDATA[
+                    <button type="button" id="btn-translate" data-loading-text="Loading" data-toggle="tooltip" title="{{ text_translate }}" class="btn btn-info"><i class="fa fa-language"></i> {{ text_translate }}</button>
+                    <hr/>
+                    ]]></add>
+            </operation> -->
+        <operation>
+            <search><![CDATA[<div class="tab-pane" id="language{{ language.language_id }}">]]></search>
+            <add position="after"><![CDATA[
+                {% if bdlt_status %}
+                    {% if language.language_id != default_language %}
+                        <button type="button" data-langid="{{ language.language_id }}" data-loading-text="Loading" data-toggle="tooltip" title="{{ text_translate }} {{ language.name }}" class="btn btn-primary btn-translate"><i class="fa fa-language"></i>{{ text_translate }} {{ language.name }}</button>
+                    {% endif %}
+                {% endif %}
+                    ]]></add>
+        </operation>
+         <operation>
+        <search><![CDATA[<label class="col-sm-2 control-label" for="input-name{{ language.language_id }}">{{ entry_name }}</label>]]></search>
+            <add position="replace"><![CDATA[
+                <label class="col-sm-2 control-label" for="input-name{{ language.language_id }}">{{ entry_name }}<br>
+                {% if bdlt_status %}
+                    {% if language.language_id == default_language %}
+                        <button type="button" data-langid="{{ language.language_id }}" data-loading-text="Loading" data-toggle="tooltip" title="{{ text_translate }} {{ language.name }}" class="btn btn-sm btn-primary btn-translate-name"><i class="fa fa-language"></i> {{ text_translate }} {{ target_language_name }}</button>
+                    {% endif %}
+                {% endif %}
+                </label>
+                    ]]></add>
+        </operation>
+         <operation>
+        <search><![CDATA[<label class="col-sm-2 control-label" for="input-description{{ language.language_id }}">{{ entry_description }}</label>]]></search>
+            <add position="replace"><![CDATA[
+                <label class="col-sm-2 control-label" for="input-description{{ language.language_id }}">{{ entry_description }}<br>
+                {% if bdlt_status %}
+                    {% if language.language_id == default_language %}
+                        <button type="button" data-langid="{{ language.language_id }}" data-loading-text="Loading" data-toggle="tooltip" title="{{ text_translate }} {{ language.name }}" class="btn btn-primary btn-sm btn-translate-desc"><i class="fa fa-language"></i> {{ text_translate }} {{ target_language_name }}</button>
+                    {% endif %}
+                {% endif %}
+                </label>
+                    ]]></add>
+        </operation>
+       <!--  <operation>
+        <search><![CDATA[<label class="col-sm-2 control-label" for="product_field_{{ field.id }}_{{ language.language_id }}">{{ field.block_name }}</label>]]></search>
+            <add position="replace"><![CDATA[
+                <label class="col-sm-2 control-label" for="product_field_{{ field.id }}_{{ language.language_id }}">{{ field.block_name }}<br>
+                {% if bdlt_status %}
+                    {% if language.language_id != default_language and (field.id == 1 or field.id == 2) %}
+                        <button type="button" data-langid="{{ language.language_id }}" data-name="{{ field.block_name }}" data-customfield="product_field_{{ field.id }}_" data-loading-text="Loading" data-toggle="tooltip" title="{{ text_translate }} {{ language.name }}" class="btn btn-sm btn-primary btn-translate-custom-field"><i class="fa fa-language"></i> {{ text_translate }} {{ language.name }}</button>
+                    {% endif %}
+                {% endif %}
+                </label>
+                    ]]></add>
+        </operation> -->
+        <operation>
+            <search><![CDATA[{{ footer }}]]></search>
+            <add position="before"><![CDATA[
+                    {% if bdlt_status %}
+                    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+                    <script>
+                        $(document).ready(function () {
+                        {% if custom_field_selectors_json %}
+                            let custom_field_selectors = {{ custom_field_selectors_json|raw }};
+                            let default_language = {{ default_language }};
+                            let target_language = {{ target_language }};
+
+                            custom_field_selectors.forEach(sel_template => {
+
+                                let selector_pattern = sel_template.replace('#', ''); // Hilangkan '#'
+                                let regex_pattern = selector_pattern.replace('{lang_id}', '(\\d+)');
+                                let regex = new RegExp('^' + regex_pattern + '$');
+
+                                $('textarea').each(function () {
+                                    let $textarea = $(this);
+                                    let id = $textarea.attr('id');
+                                    if (!id) return; 
+
+                                    let match = id.match(regex);
+                                    console.log('Checking:', id, '=> Match:', match);
+
+                                    if (match) {
+                                        let lang_id = match[1];
+
+                                        if (parseInt(lang_id) === parseInt(default_language)) {
+                                            let field_id_match = id.match(/product_field_(\d+)_/);
+                                            if (!field_id_match) return;
+
+                                            let field_id = field_id_match[1];
+                                            let $label = $('label[for="' + id + '"]');
+
+                                            if ($label.length && $label.find('.btn-translate-custom-field').length === 0) {
+                                                let field_name = $label.clone().children().remove().end().text().trim();
+
+                                                let $btn = $(`
+                                                    <button type="button"
+                                                        data-langid="${target_language}"
+                                                        data-name="${field_name}"
+                                                        data-customfield="product_field_${field_id}_"
+                                                        data-loading-text="Loading"
+                                                        data-toggle="tooltip"
+                                                        title="{{ text_translate }} {{ target_language_name }}"
+                                                        class="btn btn-sm btn-primary btn-translate-custom-field">
+                                                        <i class="fa fa-language"></i> {{ text_translate }} {{ target_language_name }}
+                                                    </button>
+                                                `);
+
+                                                $label.append('<br>').append($btn);
+                                            }
+                                        }
+
+                                        {% if paste_status %}
+                                        $textarea.on('summernote.paste', function () {
+                                            let $wrapper = $(this).closest('.form-group');
+                                            setTimeout(function () {
+                                                $wrapper.find('.btn-translate-custom-field').trigger('click');
+                                            }, 100);
+                                        });
+                                        {% endif %}
+                                    }
+                                });
+                            });
+                        {% endif %}
+
+                         {% if paste_status %}
+                        $('textarea[id^="input-description"]').each(function () {
+                            let $textarea = $(this);                    
+                            $textarea.on('summernote.paste', function () {
+                                let $wrapper = $(this).closest('.form-group'); // atau gunakan .tab-pane jika ada
+                                setTimeout(function () {
+                                    $wrapper.find('.btn-translate-desc').trigger('click');
+                                }, 100);
+                            });
+                        });
+                         $('input[id^="input-name"]').each(function () {
+                            let $input = $(this);        
+                            // Saat paste atau input
+                            $input.on('paste', function () {
+                                let $wrapper = $(this).closest('.form-group');
+                                setTimeout(function () {
+                                    $wrapper.find('.btn-translate-name').trigger('click');
+                                }, 100);
+                            });
+                        });
+                         $('input[id^="title-slug"]').each(function () {
+                            let $input = $(this);        
+                            // Saat paste atau input
+                            $input.on('paste', function () {
+                                let $wrapper = $(this).closest('.form-group');
+                                setTimeout(function () {
+                                    $wrapper.find('.btn-translate-name').trigger('click');
+                                }, 100);
+                            });
+                        });
+                       {% endif %}
+                            $('.btn-translate-name').click(function () {
+
+                                let lang_id =  {{ default_language }};
+                                let target_id = {{ target_language }};
+
+                                let name = $('#input-name' + lang_id + ', #title-slug' + lang_id).val()?.trim() || '';
+                                 if (!name) {
+                                        toastr.error('Field Name required.');
+                                        return;
+                                    }
+                                    
+                                let data = {
+                                    name: name,
+                                };
+
+                                $.ajax({
+                                    url: 'index.php?route=extension/module/bdlt_setting/translate&user_token={{ user_token }}&language='+target_id,
+                                    method: 'POST',
+                                   data: {
+                                        data: JSON.stringify(data)
+                                    },
+                                    dataType: 'json',
+                                    beforeSend: function () {
+                                        $('.btn-translate-name').button('loading');
+                                    },
+                                    complete: function () {
+                                        $('.btn-translate-name').button('reset');
+                                    },
+                                    success: function (res) {
+                                        if (res.success && res.data) {
+                                            if ($('#input-name' + target_id).length) {
+                                                $('#input-name' + target_id).val(name).trigger('keyup');;
+                                            } else if ($('#title-slug' + target_id).length) {
+                                                $('#title-slug' + target_id).val(name).trigger('keyup');;
+                                            }
+                                            toastr.success(res.message);
+                                        }
+                                        if (res.error) {
+                                            toastr.error(res.error);
+                                        }
+                                    },
+                                    error: function () {
+                                        toastr.error('Failed to request response');
+                                    }
+
+                                });
+                            });
+
+                            $('.btn-translate-desc').click(function () {
+
+                                let lang_id =  {{ default_language }};
+                                let target_id = {{ target_language }};
+
+                                    let description = $('#input-description' + lang_id).val().trim();
+
+                                    let rawDescription = $('#input-description' + lang_id).summernote('code');
+
+                                    let cleanDescription = rawDescription
+                                        .replace(/<[^>]*>/g, '')         // hilangkan semua tag HTML
+                                        .replace(/&nbsp;/g, '')          // hilangkan &nbsp;
+                                        .replace(/\s+/g, '')             // hilangkan spasi/tab/newline
+
+                                    if (!cleanDescription) {
+                                        toastr.error('Field Description required.');
+                                        return;
+                                    }
+
+
+
+                                    if (!description) {
+                                        toastr.error('Field Description required.');
+                                        return;
+                                    }
+                                let data = {
+                                    description: $('#input-description' + lang_id).val(),
+                                };
+                            
+
+                                $.ajax({
+                                    url: 'index.php?route=extension/module/bdlt_setting/translate&user_token={{ user_token }}&language='+target_id,
+                                    method: 'POST',
+                                   data: {
+                                        data: JSON.stringify(data)
+                                    },
+                                    dataType: 'json',
+                                    beforeSend: function () {
+                                        $('.btn-translate-desc').button('loading');
+                                    },
+                                    complete: function () {
+                                        $('.btn-translate-desc').button('reset');
+                                    },
+                                    success: function (res) {
+                                        if (res.success && res.data) { 
+                                            $('#input-description' + target_id).summernote('code', res.data.description);
+                                            toastr.success(res.message);
+                                        }
+                                        if (res.error) {
+                                            toastr.error(res.error);
+                                        }
+                                    },
+                                    error: function () {
+                                        toastr.error('Failed to request response');
+                                    }
+
+                                });
+                            });
+
+                            $('.btn-translate-custom-field').click(function () {
+
+                                let lang_id =  {{ default_language }};
+                                let target_id = {{ target_language }};
+                                let name = $(this).data('name');
+                                let custom_field_selector = $(this).data('customfield');
+                                    let description = $('#' + custom_field_selector + lang_id).val().trim();
+
+                                    let rawDescription = $('#' + custom_field_selector + lang_id).summernote('code');
+
+                                    let cleanDescription = rawDescription
+                                        .replace(/<[^>]*>/g, '')         // hilangkan semua tag HTML
+                                        .replace(/&nbsp;/g, '')          // hilangkan &nbsp;
+                                        .replace(/\s+/g, '')             // hilangkan spasi/tab/newline
+
+                                    if (!cleanDescription) {
+                                        toastr.error('Field '+name+' required.');
+                                        return;
+                                    }
+
+
+
+                                    if (!description) {
+                                        toastr.error('Field '+name+' required.');
+                                        return;
+                                    }
+                                let data = {
+                                    description: $('#' + custom_field_selector + lang_id).val(),
+                                };
+                            
+
+                                $.ajax({
+                                    url: 'index.php?route=extension/module/bdlt_setting/translate&user_token={{ user_token }}&language='+target_id,
+                                    method: 'POST',
+                                   data: {
+                                        data: JSON.stringify(data)
+                                    },
+                                    dataType: 'json',
+                                    beforeSend: function () {
+                                        $('.btn-translate-custom-field').button('loading');
+                                    },
+                                    complete: function () {
+                                        $('.btn-translate-custom-field').button('reset');
+                                    },
+                                    success: function (res) {
+                                        if (res.success && res.data) { 
+                                           $('#' + custom_field_selector + target_id).summernote('code', res.data.description);
+                                            toastr.success(res.message);
+                                        }
+                                        if (res.error) {
+                                            toastr.error(res.error);
+                                        }
+                                    },
+                                    error: function () {
+                                        toastr.error('Failed to request response');
+                                    }
+
+                                });
+                            });
+
+
+                             $('.btn-translate').click(function () {
+
+                                let lang_id = {{ default_language }};
+                                let target_id = $(this).data('langid');
+
+                                let name = $('#input-name' + lang_id + ', #title-slug' + lang_id).val()?.trim() || '';
+                                 if (!name) {
+                                        toastr.error('Field Name required.');
+                                        return;
+                                    }
+                                    let description = $('#input-description' + lang_id).val().trim();
+
+                                    let rawDescription = $('#input-description' + lang_id).summernote('code');
+
+                                    let cleanDescription = rawDescription
+                                        .replace(/<[^>]*>/g, '')         // hilangkan semua tag HTML
+                                        .replace(/&nbsp;/g, '')          // hilangkan &nbsp;
+                                        .replace(/\s+/g, '')             // hilangkan spasi/tab/newline
+
+                                    if (!cleanDescription) {
+                                        toastr.error('Field Description required.');
+                                        return;
+                                    }
+
+
+
+                                    if (!description) {
+                                        toastr.error('Field Description required.');
+                                        return;
+                                    }
+                                let data = {
+                                  //  name: name,
+                                    description: $('#input-description' + lang_id).val(),
+                                    meta_title: $('#input-meta-title' + lang_id).val(),
+                                    meta_description: $('#input-meta-description' + lang_id).val(),
+                                    meta_keyword: $('#input-meta-keyword' + lang_id).val(),
+                                    custom_fields: {}
+                                };
+                                {% if custom_field_selectors_json %}
+                                let custom_field_selectors = {{ custom_field_selectors_json|raw }};
+                                custom_field_selectors.forEach(selector => {
+                                    let source_selector = selector.replace('{lang_id}', lang_id);
+                                    let target_selector = selector.replace('{lang_id}', target_id);
+                                    let $el = $(source_selector);
+                                    if ($el.length) {
+                                        let value = $el.hasClass('summernote') ? $el.summernote('code') : $el.val();
+                                        data.custom_fields[target_selector] = value;
+                                    }
+                                });
+                                {% endif %}
+
+                                $.ajax({
+                                    url: 'index.php?route=extension/module/bdlt_setting/translate&user_token={{ user_token }}&language='+target_id,
+                                    method: 'POST',
+                                   data: {
+                                        data: JSON.stringify(data)
+                                    },
+                                    dataType: 'json',
+                                    beforeSend: function () {
+                                        $('.btn-translate').button('loading');
+                                    },
+                                    complete: function () {
+                                        $('.btn-translate').button('reset');
+                                    },
+                                    success: function (res) {
+                                        if (res.success && res.data) {
+                                            if ($('#input-name' + target_id).length) {
+                                                $('#input-name' + target_id).val(name).trigger('keyup');;
+                                            } else if ($('#title-slug' + target_id).length) {
+                                                $('#title-slug' + target_id).val(name).trigger('keyup');;
+                                            }
+                                            $('#input-description' + target_id).summernote('code', res.data.description);
+                                            $('#input-meta-title' + target_id).val(res.data.meta_title);
+                                            $('#input-meta-description' + target_id).val(res.data.meta_description);
+                                            $('#input-meta-keyword' + target_id).val(res.data.meta_keyword);
+                                            if (res.custom_fields) {
+                                                for (const selector in res.custom_fields) {
+                                                    const $el = $(selector);
+                                                    if ($el.length) {
+                                                        if ($el.hasClass('summernote')) {
+                                                            $el.summernote('code', res.custom_fields[selector]);
+                                                        } else {
+                                                            $el.val(res.custom_fields[selector]);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            toastr.success(res.message);
+                                        }
+                                        if (res.error) {
+                                            toastr.error(res.error);
+                                        }
+                                    },
+                                    error: function () {
+                                        toastr.error('Failed to request response');
+                                    }
+
+                                });
+                            });
+
+                            });
+                        </script>
+                    {% endif %}
+                    ]]></add>
+        </operation>
+    </file>
+</modification>
