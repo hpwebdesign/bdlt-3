@@ -255,9 +255,9 @@
                                     success: function (res) {
                                         if (res.success && res.data) {
                                             if ($('#input-name' + target_id).length) {
-                                                $('#input-name' + target_id).val(name).trigger('keyup');;
+                                                $('#input-name' + target_id).val(res.data.name).trigger('keyup');;
                                             } else if ($('#title-slug' + target_id).length) {
-                                                $('#title-slug' + target_id).val(name).trigger('keyup');;
+                                                $('#title-slug' + target_id).val(res.data.name).trigger('keyup');;
                                             }
                                             toastr.success(res.message);
                                         }
