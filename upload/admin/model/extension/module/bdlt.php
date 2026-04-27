@@ -35,38 +35,55 @@ class ModelExtensionModuleBdlt extends Model {
 
     private function translateTextDeepL($text, $target_lang, $endpoint, $api_key, $label = 'field') {
 
-    if (empty($text)) return '';
-
+        if (empty($text)) return '';
+    
         $payload = [
-            'auth_key'    => $api_key,
             'text'        => $text,
             'target_lang' => strtoupper($target_lang),
             'tag_handling'=> 'html',
             'preserve_formatting' => 1
         ];
-
+    
+        $headers = [
+            'Authorization: DeepL-Auth-Key ' . $api_key,
+            'Content-Type: application/x-www-form-urlencoded'
+        ];
+    
         $ch = curl_init($endpoint);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-
+    
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($payload),
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+        ]);
+    
         $response = curl_exec($ch);
-
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
         if (curl_errno($ch)) {
-            $this->log->write('CURL ERROR: ' . curl_error($ch));
-            throw new Exception('CURL Error on "' . $label . '": ' . curl_error($ch));
+            $error = curl_error($ch);
+            $this->log->write('CURL ERROR [' . $label . ']: ' . $error);
+            throw new Exception('CURL Error: ' . $error);
         }
-
+    
         curl_close($ch);
-
+    
+        $this->log->write('DeepL HTTP CODE [' . $label . ']: ' . $http_code);
+        $this->log->write('DeepL RESPONSE [' . $label . ']: ' . $response);
+    
         $result = json_decode($response, true);
-
+    
+        if ($http_code !== 200) {
+            throw new Exception('DeepL HTTP Error ' . $http_code);
+        }
+    
         if (!isset($result['translations'][0]['text'])) {
-            $this->log->write('DeepL API ERROR for "' . $label . '": ' . print_r($result, true));
             throw new Exception('Translation failed for "' . $label . '"');
         }
-
+    
         return $result['translations'][0]['text'];
     }
 
